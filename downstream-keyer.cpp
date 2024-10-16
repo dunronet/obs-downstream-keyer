@@ -1,4 +1,5 @@
 #include "downstream-keyer.hpp"
+#include "downstream-keyer-dock.hpp"
 
 #include <QCheckBox>
 #include <QComboBox>
@@ -18,9 +19,10 @@
 
 extern obs_websocket_vendor vendor;
 
-DownstreamKeyer::DownstreamKeyer(int channel, QString name, obs_view_t *v, obs_canvas_t *c, get_transitions_callback_t gt,
+DownstreamKeyer::DownstreamKeyer(DownstreamKeyerDock *parent, int channel, QString name, obs_view_t *v, obs_canvas_t *c, get_transitions_callback_t gt,
 				 void *gtd)
-	: outputChannel(channel),
+	: parent(parent),
+	  outputChannel(channel),
 	  transition(nullptr),
 	  showTransition(nullptr),
 	  hideTransition(nullptr),
@@ -414,6 +416,7 @@ void DownstreamKeyer::apply_selected_source()
 
 void DownstreamKeyer::on_scenesList_itemSelectionChanged()
 {
+	parent->RefreshDSKPreview(); // let parent know preview would need to be refreshed
 	if (tie->isChecked())
 		return;
 
@@ -1147,3 +1150,8 @@ LockedCheckBox::LockedCheckBox()
 }
 
 LockedCheckBox::LockedCheckBox(QWidget *parent) : QCheckBox(parent) {}
+
+QListWidget *DownstreamKeyer::getScenesListWidget() // expose scenesList widget to parent (and others...)
+{
+	return scenesList;
+}

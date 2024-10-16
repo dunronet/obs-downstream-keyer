@@ -1,4 +1,6 @@
 #pragma once
+#ifndef DOWNSTREAMKEYER_H
+#define DOWNSTREAMKEYER_H
 
 #include <QCheckBox>
 #include <QComboBox>
@@ -13,7 +15,10 @@
 #include "obs-websocket-api.h"
 #include "obs.h"
 
-typedef void (*get_transitions_callback_t)(void *data, struct obs_frontend_source_list *sources);
+class DownstreamKeyerDock; // Forward declaration of ParentClass
+
+typedef void (*get_transitions_callback_t)(
+	void *data, struct obs_frontend_source_list *sources);
 
 class LockedCheckBox : public QCheckBox {
 	Q_OBJECT
@@ -29,6 +34,7 @@ class DownstreamKeyer : public QWidget {
 	Q_OBJECT
 
 private:
+	DownstreamKeyerDock *parent;
 	QTimer hideTimer;
 	int outputChannel;
 	obs_source_t *transition;
@@ -76,7 +82,7 @@ private slots:
 signals:
 
 public:
-	DownstreamKeyer(int channel, QString name, obs_view_t *view = nullptr, obs_canvas_t *canvas = nullptr,
+	DownstreamKeyer(DownstreamKeyerDock *parent, int channel, QString name, obs_view_t *view = nullptr, obs_canvas_t *canvas = nullptr,
 			get_transitions_callback_t get_transitions = nullptr, void *get_transitions_data = nullptr);
 	~DownstreamKeyer();
 
@@ -102,4 +108,7 @@ public:
 	bool RemoveAllScenes();
 	void SetTie(bool tie);
 	void SetOutputChannel(int outputChannel);
+	QListWidget *getScenesListWidget(); 
 };
+
+#endif
