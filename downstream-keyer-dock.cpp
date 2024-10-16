@@ -632,6 +632,21 @@ bool DownstreamKeyerDock::AddScene(QString dskName, QString sceneName)
 	return false;
 }
 
+bool DownstreamKeyerDock::AddSpacerScene(QString dskName, QString spacerName)
+{
+	const int count = tabs->count();
+	for (int i = 0; i < count; i++) {
+		auto w = dynamic_cast<DownstreamKeyer *>(tabs->widget(i));
+		if (w->objectName() == dskName) {
+			if (w->AddSpacerScene(spacerName)) {
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+
 bool DownstreamKeyerDock::RemoveScene(QString dskName, QString sceneName)
 {
 	const int count = tabs->count();
@@ -809,7 +824,41 @@ void DownstreamKeyerDock::add_scene(obs_data_t *request_data,
 			  dsk->AddScene(QString::fromUtf8(dsk_name),
 					QString::fromUtf8(scene_name)));
 }
+void DownstreamKeyerDock::add_spacer_scene(obs_data_t *request_data,
+				    obs_data_t *response_data, void *param)
+{
+	UNUSED_PARAMETER(param);
+	const char *viewName = obs_data_get_string(request_data, "view_name");
+	if (_dsks.find(viewName) == _dsks.end()) {
+		obs_data_set_string(response_data, "error",
+				    "'view_name' not found");
+		obs_data_set_bool(response_data, "success", false);
+		return;
+	}
+	auto dsk = _dsks[viewName];
+	const char *dsk_name = obs_data_get_string(request_data, "dsk_name");
+	const char *scene_name = obs_data_get_string(request_data, "scene");
+	if (scene_name) {
+		obs_data_set_string(response_data, "error", "'scene' already exists");
+		obs_data_set_bool(response_data, "success", false);
+		return;
+	} else if (!strlen(scene_name)) {
+		obs_data_set_string(response_data, "error",
+				    "'scene' name too short");
+		obs_data_set_bool(response_data, "success", false);
+		return;
+	}
+	if (!dsk_name || !strlen(dsk_name)) {
+		obs_data_set_string(response_data, "error",
+				    "'dsk_name' not set");
 
+		obs_data_set_bool(response_data, "success", false);
+		return;
+	}
+	obs_data_set_bool(response_data, "success",
+			  dsk->AddSpacerScene(QString::fromUtf8(dsk_name),
+					QString::fromUtf8(spacer_name)));
+}
 void DownstreamKeyerDock::remove_scene(obs_data_t *request_data,
 				       obs_data_t *response_data, void *param)
 {

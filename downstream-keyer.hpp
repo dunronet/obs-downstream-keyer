@@ -8,7 +8,7 @@
 #include <qtoolbar.h>
 #include <QWidget>
 #include <set>
-
+#include "name-dialog.hpp"
 #include "obs-websocket-api.h"
 #include "obs.h"
 
@@ -67,6 +67,7 @@ private:
 
 private slots:
 	void on_actionAddScene_triggered();
+	void on_actionAddSpacerScene_triggered();
 	void on_actionRemoveScene_triggered();
 	void on_actionSceneUp_triggered();
 	void on_actionSceneDown_triggered();
@@ -97,6 +98,8 @@ public:
 	bool SwitchToScene(QString scene_name);
 	void add_scene(QString scene_name, obs_source_t *s);
 	bool AddScene(QString scene_name);
+	void add_spacer_scene(QString spacer_name);
+	bool AddSpacerScene(QString spacer_name);	
 	bool RemoveScene(QString scene_name);
 	void SetTie(bool tie);
 	void SetOutputChannel(int outputChannel);
