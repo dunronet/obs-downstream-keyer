@@ -67,6 +67,7 @@ DownstreamKeyer::DownstreamKeyer(DownstreamKeyerDock *parent, int channel, QStri
 	auto actionAddScene = new QAction(this);
 	actionAddScene->setObjectName(QStringLiteral("actionAddScene"));
 	actionAddScene->setProperty("themeID", "addIconSmall");
+	actionAddScene->setProperty("class", "icon-plus");
 	actionAddScene->setText(QT_UTF8(obs_module_text("Add")));
 	connect(actionAddScene, SIGNAL(triggered()), this,
 		SLOT(on_actionAddScene_triggered()));
@@ -76,6 +77,7 @@ DownstreamKeyer::DownstreamKeyer(DownstreamKeyerDock *parent, int channel, QStri
 	actionRemoveScene->setObjectName(QStringLiteral("actionRemoveScene"));
 	actionRemoveScene->setShortcutContext(Qt::WidgetWithChildrenShortcut);
 	actionRemoveScene->setProperty("themeID", "removeIconSmall");
+	actionRemoveScene->setProperty("class", "icon-minus");
 	actionRemoveScene->setText(QT_UTF8(obs_module_text("Remove")));
 	connect(actionRemoveScene, SIGNAL(triggered()), this,
 		SLOT(on_actionRemoveScene_triggered()));
@@ -86,6 +88,7 @@ DownstreamKeyer::DownstreamKeyer(DownstreamKeyerDock *parent, int channel, QStri
 	auto actionSceneUp = new QAction(this);
 	actionSceneUp->setObjectName(QStringLiteral("actionSceneUp"));
 	actionSceneUp->setProperty("themeID", "upArrowIconSmall");
+	actionSceneUp->setProperty("class", "icon-up");
 	actionSceneUp->setText(QT_UTF8(obs_module_text("MoveUp")));
 	connect(actionSceneUp, SIGNAL(triggered()), this,
 		SLOT(on_actionSceneUp_triggered()));
@@ -94,6 +97,7 @@ DownstreamKeyer::DownstreamKeyer(DownstreamKeyerDock *parent, int channel, QStri
 	auto actionSceneDown = new QAction(this);
 	actionSceneDown->setObjectName(QStringLiteral("actionSceneDown"));
 	actionSceneDown->setProperty("themeID", "downArrowIconSmall");
+	actionSceneDown->setProperty("class", "icon-down");
 	actionSceneDown->setText(QT_UTF8(obs_module_text("MoveDown")));
 	connect(actionSceneDown, SIGNAL(triggered()), this,
 		SLOT(on_actionSceneDown_triggered()));
@@ -104,6 +108,7 @@ DownstreamKeyer::DownstreamKeyer(DownstreamKeyerDock *parent, int channel, QStri
 	auto actionSceneNull = new QAction(this);
 	actionSceneNull->setObjectName(QStringLiteral("actionSceneNull"));
 	actionSceneNull->setProperty("themeID", "pauseIconSmall");
+	actionSceneNull->setProperty("class", "icon-media-pause");
 	actionSceneNull->setText(QT_UTF8(obs_module_text("None")));
 	connect(actionSceneNull, SIGNAL(triggered()), this,
 		SLOT(on_actionSceneNull_triggered()));
@@ -1091,6 +1096,7 @@ void DownstreamKeyer::SetOutputChannel(int oc)
 LockedCheckBox::LockedCheckBox()
 {
 	setProperty("lockCheckBox", true);
+	setProperty("class", "indicator-lock");
 }
 
 LockedCheckBox::LockedCheckBox(QWidget *parent) : QCheckBox(parent) {}
