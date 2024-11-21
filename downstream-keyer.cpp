@@ -918,8 +918,9 @@ bool DownstreamKeyer::SwitchToScene(QString scene_name)
 void DownstreamKeyer::add_scene(QString scene_name, obs_source_t *s, int insertBeforeRow)
 {
 	const auto item = new QListWidgetItem(scene_name);
-	if (insertBeforeRow < 0) {
-		insertBeforeRow = scenesList->count();
+	int scenesListCount = scenesList->count();
+	if ((insertBeforeRow > scenesListCount) || (insertBeforeRow < 0)) {
+		insertBeforeRow = scenesListCount;
 	}
 	scenesList->insertItem(insertBeforeRow, item);
 
