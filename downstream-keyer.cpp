@@ -1,4 +1,5 @@
 #include "downstream-keyer.hpp"
+#include "downstream-keyer-dock.hpp"
 
 #include <QCheckBox>
 #include <QComboBox>
@@ -18,9 +19,10 @@
 
 extern obs_websocket_vendor vendor;
 
-DownstreamKeyer::DownstreamKeyer(int channel, QString name, obs_view_t *v,
+DownstreamKeyer::DownstreamKeyer(DownstreamKeyerDock *parent, int channel, QString name, obs_view_t *v,
 				 get_transitions_callback_t gt, void *gtd)
-	: outputChannel(channel),
+	: parent(parent),
+	  outputChannel(channel),
 	  transition(nullptr),
 	  showTransition(nullptr),
 	  hideTransition(nullptr),
@@ -238,6 +240,25 @@ void DownstreamKeyer::on_actionAddScene_triggered()
 
 	obs_source_release(scene);
 }
+void DownstreamKeyer::on_actionAddSpacerScene_triggered() {
+	// add a message box in...
+	std::string spacer_name = "Give spacer a unique name";
+	if (NameDialog::AskForName(this, spacer_name)) {
+
+		auto spacerName2 = QT_UTF8(spacer_name);
+		if (scenesList->findItems(spacerName2, Qt::MatchFixedString)
+			    .count() == 0) {
+			add_spacer_scene(spacerName2);
+		} else {
+
+			/* todo: give dialog that name is not permitted because it's not unique. Low priority because AddScene doesn't give feedback... */
+			
+		}
+
+
+	}
+
+}
 
 void DownstreamKeyer::on_actionRemoveScene_triggered()
 {
@@ -375,6 +396,7 @@ void DownstreamKeyer::apply_selected_source()
 
 void DownstreamKeyer::on_scenesList_itemSelectionChanged()
 {
+	parent->RefreshDSKPreview(); // let parent know preview would need to be refreshed
 	if (tie->isChecked())
 		return;
 
@@ -960,7 +982,33 @@ bool DownstreamKeyer::AddScene(QString scene_name, int insertBeforeRow)
 	obs_source_release(s);
 	return false;
 }
+void DownstreamKeyer::add_spacer_scene(QString spacer_name)
+{
+	const auto item = new QListWidgetItem(spacer_name);
+	scenesList->addItem(item);
 
+	std::string enable_hotkey = obs_module_text("EnableDSK");
+	enable_hotkey += " ";
+	enable_hotkey += QT_TO_UTF8(objectName());
+	std::string disable_hotkey = obs_module_text("DisableDSK");
+	disable_hotkey += " ";
+	disable_hotkey += QT_TO_UTF8(objectName());
+	uint64_t h = obs_hotkey_pair_register_source(
+		s, enable_hotkey.c_str(), enable_hotkey.c_str(),
+		disable_hotkey.c_str(), disable_hotkey.c_str(),
+		enable_DSK_hotkey, disable_DSK_hotkey, this, this);
+
+	if (h != OBS_INVALID_HOTKEY_PAIR_ID) {
+		item->setData(Qt::UserRole, static_cast<uint>(h));
+	}
+}
+
+
+bool DownstreamKeyer::AddSpacerScene(QString spacer_name) {
+	add_spacer_scene(spacer_name);
+	return true;
+
+}
 bool DownstreamKeyer::RemoveScene(QString scene_name)
 {
 	if (scene_name.isEmpty()) {
@@ -1056,3 +1104,8 @@ LockedCheckBox::LockedCheckBox()
 }
 
 LockedCheckBox::LockedCheckBox(QWidget *parent) : QCheckBox(parent) {}
+
+QListWidget *DownstreamKeyer::getScenesListWidget() // expose scenesList widget to parent (and others...)
+{
+	return scenesList;
+}
