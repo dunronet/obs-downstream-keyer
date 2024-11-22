@@ -28,7 +28,7 @@ private:
 	void Save(obs_data_t *data);
 	void Load(obs_data_t *data);
 	bool SwitchDSK(QString dskName, QString sceneName);
-	bool AddScene(QString dskName, QString sceneName);
+	bool AddScene(QString dskName, QString sceneName, int insertBeforeRow);
 	bool AddSpacerScene(QString dskName, QString spacerName);
 	bool RemoveScene(QString dskName, QString sceneName);
 	bool SetTie(QString dskName, bool tie);

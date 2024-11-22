@@ -101,8 +101,8 @@ public:
 	void RemoveExcludeScene(const char *scene_name);
 	bool IsSceneExcluded(const char *scene_name);
 	bool SwitchToScene(QString scene_name);
-	void add_scene(QString scene_name, obs_source_t *s);
-	bool AddScene(QString scene_name);
+	void add_scene(QString scene_name, obs_source_t *s, int insertBeforeRow);
+	bool AddScene(QString scene_name, int insertBeforeRow);
 	void add_spacer_scene(QString spacer_name);
 	bool AddSpacerScene(QString spacer_name);	
 	bool RemoveScene(QString scene_name);

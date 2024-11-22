@@ -622,13 +622,13 @@ bool DownstreamKeyerDock::SwitchDSK(QString dskName, QString sceneName)
 	return false;
 }
 
-bool DownstreamKeyerDock::AddScene(QString dskName, QString sceneName)
+bool DownstreamKeyerDock::AddScene(QString dskName, QString sceneName, int insertBeforeRow)
 {
 	const int count = tabs->count();
 	for (int i = 0; i < count; i++) {
 		auto w = dynamic_cast<DownstreamKeyer *>(tabs->widget(i));
 		if (w->objectName() == dskName) {
-			if (w->AddScene(sceneName)) {
+			if (w->AddScene(sceneName, insertBeforeRow)) {
 				return true;
 			}
 		}
@@ -842,6 +842,7 @@ void DownstreamKeyerDock::add_scene(obs_data_t *request_data,
 	auto dsk = _dsks[viewName];
 	const char *dsk_name = obs_data_get_string(request_data, "dsk_name");
 	const char *scene_name = obs_data_get_string(request_data, "scene");
+	int insertBeforeRow = obs_data_get_int(request_data, "insertBeforeRow");
 	if (!scene_name || !strlen(scene_name)) {
 		obs_data_set_string(response_data, "error", "'scene' not set");
 		obs_data_set_bool(response_data, "success", false);
@@ -854,9 +855,13 @@ void DownstreamKeyerDock::add_scene(obs_data_t *request_data,
 		obs_data_set_bool(response_data, "success", false);
 		return;
 	}
+
+
 	obs_data_set_bool(response_data, "success",
 			  dsk->AddScene(QString::fromUtf8(dsk_name),
-					QString::fromUtf8(scene_name)));
+					QString::fromUtf8(scene_name),
+					insertBeforeRow)
+	);
 }
 void DownstreamKeyerDock::add_spacer_scene(obs_data_t *request_data,
 				    obs_data_t *response_data, void *param)
