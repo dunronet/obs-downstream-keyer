@@ -1,4 +1,5 @@
 #include "downstream-keyer.hpp"
+#include "downstream-keyer-dock.hpp"
 
 #include <QCheckBox>
 #include <QComboBox>
@@ -18,8 +19,10 @@
 
 extern obs_websocket_vendor vendor;
 
-DownstreamKeyer::DownstreamKeyer(int channel, QString name, obs_view_t *v, get_transitions_callback_t gt, void *gtd)
-	: outputChannel(channel),
+DownstreamKeyer::DownstreamKeyer(DownstreamKeyerDock *parent, int channel, QString name, obs_view_t *v,
+				 get_transitions_callback_t gt, void *gtd)
+	: parent(parent),
+	  outputChannel(channel),
 	  transition(nullptr),
 	  showTransition(nullptr),
 	  hideTransition(nullptr),
@@ -227,8 +230,10 @@ void DownstreamKeyer::on_actionAddScene_triggered()
 	if (!scene)
 		return;
 	auto sceneName = QT_UTF8(obs_source_get_name(scene));
-	if (scenesList->findItems(sceneName, Qt::MatchFixedString).count() == 0) {
-		add_scene(sceneName, scene);
+	if (scenesList->findItems(sceneName, Qt::MatchFixedString).count() ==
+	    0) {
+		const auto currentRow = scenesList->currentRow();
+		add_scene(sceneName, scene, currentRow);
 	}
 
 	obs_source_release(scene);
@@ -252,6 +257,7 @@ void DownstreamKeyer::on_actionAddPausePoint_triggered() {
 		}
 		const auto currentRow = scenesList->currentRow();
 		add_pause_point(QT_UTF8(pauseName2),currentRow);
+
 	}
 
 }
@@ -374,6 +380,7 @@ void DownstreamKeyer::apply_selected_source()
 
 void DownstreamKeyer::on_scenesList_itemSelectionChanged()
 {
+	parent->RefreshDSKPreview(); // let parent know preview would need to be refreshed
 	if (tie->isChecked())
 		return;
 
@@ -864,10 +871,14 @@ bool DownstreamKeyer::SwitchToScene(QString scene_name)
 	return false;
 }
 
-void DownstreamKeyer::add_scene(QString scene_name, obs_source_t *s)
+void DownstreamKeyer::add_scene(QString scene_name, obs_source_t *s, int insertBeforeRow)
 {
 	const auto item = new QListWidgetItem(scene_name);
-	scenesList->addItem(item);
+	int scenesListCount = scenesList->count();
+	if ((insertBeforeRow > scenesListCount) || (insertBeforeRow < 0)) {
+		insertBeforeRow = scenesListCount;
+	}
+	scenesList->insertItem(insertBeforeRow, item);
 
 	std::string enable_hotkey = obs_module_text("EnableDSK");
 	enable_hotkey += " ";
@@ -883,7 +894,7 @@ void DownstreamKeyer::add_scene(QString scene_name, obs_source_t *s)
 	}
 }
 
-bool DownstreamKeyer::AddScene(QString scene_name)
+bool DownstreamKeyer::AddScene(QString scene_name, int insertBeforeRow)
 {
 	if (scene_name.isEmpty()) {
 		return false;
@@ -895,8 +906,7 @@ bool DownstreamKeyer::AddScene(QString scene_name)
 	auto name = nameUtf8.constData();
 	auto s = obs_get_source_by_name(name);
 	if (obs_source_is_scene(s)) {
-
-		add_scene(scene_name, s);
+		add_scene(scene_name, s, insertBeforeRow);
 		obs_source_release(s);
 		return true;
 	}
@@ -911,6 +921,7 @@ void DownstreamKeyer::add_pause_point(QString pause_name, int insertBeforeRow)
 		insertBeforeRow = scenesListCount;
 	}
 	scenesList->insertItem(insertBeforeRow, item);
+
 
 	std::string enable_hotkey = obs_module_text("EnableDSK");
 	enable_hotkey += " ";
@@ -927,7 +938,6 @@ void DownstreamKeyer::add_pause_point(QString pause_name, int insertBeforeRow)
 		item->setData(Qt::UserRole, static_cast<uint>(h));
 	}
 }
-
 
 bool DownstreamKeyer::AddPausePoint(QString pause_name, int insertBeforeRow)
 {
@@ -1018,3 +1028,8 @@ LockedCheckBox::LockedCheckBox()
 }
 
 LockedCheckBox::LockedCheckBox(QWidget *parent) : QCheckBox(parent) {}
+
+QListWidget *DownstreamKeyer::getScenesListWidget() // expose scenesList widget to parent (and others...)
+{
+	return scenesList;
+}

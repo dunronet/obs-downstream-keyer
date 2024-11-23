@@ -1,4 +1,7 @@
 #pragma once
+#ifndef	DOWNSTREAMKEYERDOCK_H
+#define DOWNSTREAMKEYERDOCK_H
+
 #include <QDockWidget>
 #include <qmenu.h>
 #include <QTabWidget>
@@ -24,7 +27,7 @@ private:
 	void Save(obs_data_t *data);
 	void Load(obs_data_t *data);
 	bool SwitchDSK(QString dskName, QString sceneName);
-	bool AddScene(QString dskName, QString sceneName);
+	bool AddScene(QString dskName, QString sceneName, int insertBeforeRow);
 	bool AddPausePoint(QString dskName, QString pauseName, int insertBeforeRow);
 	bool RemoveScene(QString dskName, QString sceneName);
 	bool SetTie(QString dskName, bool tie);
@@ -63,4 +66,6 @@ public:
 	static void set_transition(obs_data_t *request_data, obs_data_t *response_data, void *param);
 	static void add_exclude_scene(obs_data_t *request_data, obs_data_t *response_data, void *param);
 	static void remove_exclude_scene(obs_data_t *request_data, obs_data_t *response_data, void *param);
+	void RefreshDSKPreview();
 };
+#endif

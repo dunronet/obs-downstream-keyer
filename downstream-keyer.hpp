@@ -1,4 +1,6 @@
 #pragma once
+#ifndef DOWNSTREAMKEYER_H
+#define DOWNSTREAMKEYER_H
 
 #include <QCheckBox>
 #include <QComboBox>
@@ -13,7 +15,10 @@
 #include "obs-websocket-api.h"
 #include "obs.h"
 
-typedef void (*get_transitions_callback_t)(void *data, struct obs_frontend_source_list *sources);
+class DownstreamKeyerDock; // Forward declaration of ParentClass
+
+typedef void (*get_transitions_callback_t)(
+	void *data, struct obs_frontend_source_list *sources);
 
 class LockedCheckBox : public QCheckBox {
 	Q_OBJECT
@@ -30,6 +35,7 @@ class DownstreamKeyer : public QWidget {
 
 private:
 	QTimer hideTimer;
+	DownstreamKeyerDock *parent;
 	int outputChannel;
 	obs_source_t *transition;
 	obs_source_t *showTransition;
@@ -75,7 +81,8 @@ private slots:
 signals:
 
 public:
-	DownstreamKeyer(int channel, QString name, obs_view_t *view = nullptr, get_transitions_callback_t get_transitions = nullptr,
+	DownstreamKeyer(DownstreamKeyerDock *parent, int channel, QString name, obs_view_t *view = nullptr,
+			get_transitions_callback_t get_transitions = nullptr,
 			void *get_transitions_data = nullptr);
 	~DownstreamKeyer();
 
@@ -92,11 +99,14 @@ public:
 	void RemoveExcludeScene(const char *scene_name);
 	bool IsSceneExcluded(const char *scene_name);
 	bool SwitchToScene(QString scene_name);
-	void add_scene(QString scene_name, obs_source_t *s);
-	bool AddScene(QString scene_name);
+	void add_scene(QString scene_name, obs_source_t *s, int insertBeforeRow);
+	bool AddScene(QString scene_name, int insertBeforeRow);
 	void add_pause_point(QString pause_name, int insertBeforeRow);
 	bool AddPausePoint(QString pause_name, int insertBeforeRow);	
 	bool RemoveScene(QString scene_name);
 	void SetTie(bool tie);
 	void SetOutputChannel(int outputChannel);
+	QListWidget *getScenesListWidget(); 
 };
+
+#endif
