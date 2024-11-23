@@ -171,6 +171,7 @@ void obs_module_post_load(void)
 					      nullptr);
 	obs_websocket_vendor_register_request(vendor, "dsk_select_scene", DownstreamKeyerDock::change_scene, nullptr);
 	obs_websocket_vendor_register_request(vendor, "dsk_add_scene", DownstreamKeyerDock::add_scene, nullptr);
+	obs_websocket_vendor_register_request(vendor, "dsk_add_pause_point", DownstreamKeyerDock::add_pause_point, nullptr);
 	obs_websocket_vendor_register_request(vendor, "dsk_remove_scene", DownstreamKeyerDock::remove_scene, nullptr);
 	obs_websocket_vendor_register_request(vendor, "dsk_set_tie", DownstreamKeyerDock::set_tie, nullptr);
 	obs_websocket_vendor_register_request(vendor, "dsk_set_transition", DownstreamKeyerDock::set_transition, nullptr);
@@ -193,6 +194,7 @@ void obs_module_unload()
 	obs_websocket_vendor_unregister_request(vendor, "remove_downstream_keyer");
 	obs_websocket_vendor_unregister_request(vendor, "dsk_select_scene");
 	obs_websocket_vendor_unregister_request(vendor, "dsk_add_scene");
+	obs_websocket_vendor_unregister_request(vendor, "dsk_add_pause_point");
 	obs_websocket_vendor_unregister_request(vendor, "dsk_remove_scene");
 	obs_websocket_vendor_unregister_request(vendor, "dsk_set_tie");
 	obs_websocket_vendor_unregister_request(vendor, "dsk_set_transition");
@@ -602,6 +604,21 @@ bool DownstreamKeyerDock::AddScene(QString dskName, QString sceneName)
 	return false;
 }
 
+bool DownstreamKeyerDock::AddPausePoint(QString dskName, QString pauseName, int insertBeforeRow)
+{
+	const int count = tabs->count();
+	for (int i = 0; i < count; i++) {
+		auto w = dynamic_cast<DownstreamKeyer *>(tabs->widget(i));
+		if (w->objectName() == dskName) {
+			if (w->AddPausePoint(pauseName, insertBeforeRow)) {
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+
 bool DownstreamKeyerDock::RemoveScene(QString dskName, QString sceneName)
 {
 	const int count = tabs->count();
@@ -817,8 +834,40 @@ void DownstreamKeyerDock::add_scene(obs_data_t *request_data, obs_data_t *respon
 	}
 	obs_data_set_bool(response_data, "success", dsk->AddScene(QString::fromUtf8(dsk_name), QString::fromUtf8(scene_name)));
 }
+void DownstreamKeyerDock::add_pause_point(obs_data_t *request_data,
+				    obs_data_t *response_data, void *param)
+{
+	UNUSED_PARAMETER(param);
+	const char *viewName = obs_data_get_string(request_data, "view_name");
+	if (_dsks.find(viewName) == _dsks.end()) {
+		obs_data_set_string(response_data, "error",
+				    "'view_name' not found");
+		obs_data_set_bool(response_data, "success", false);
+		return;
+	}
+	auto dsk = _dsks[viewName];
+	const char *dsk_name = obs_data_get_string(request_data, "dsk_name");
+	const char *pause_name = obs_data_get_string(request_data, "pause_name");
+	int insert_before_row = obs_data_get_int(request_data, "insert_before_row");
+	if (!pause_name || !strlen(pause_name)) {
+		obs_data_set_string(response_data, "error",
+				    "'pause_name' name too short");
+		obs_data_set_bool(response_data, "success", false);
+		return;
+	}
+	if (!dsk_name || !strlen(dsk_name)) {
+		obs_data_set_string(response_data, "error",
+				    "'dsk_name' not set");
 
-void DownstreamKeyerDock::remove_scene(obs_data_t *request_data, obs_data_t *response_data, void *param)
+		obs_data_set_bool(response_data, "success", false);
+		return;
+	}
+	obs_data_set_bool(response_data, "success",
+			  dsk->AddPausePoint(QString::fromUtf8(dsk_name), QString::fromUtf8(pause_name),
+					      insert_before_row));
+}
+void DownstreamKeyerDock::remove_scene(obs_data_t *request_data,
+				       obs_data_t *response_data, void *param)
 {
 	UNUSED_PARAMETER(param);
 	const char *viewName = obs_data_get_string(request_data, "view_name");
