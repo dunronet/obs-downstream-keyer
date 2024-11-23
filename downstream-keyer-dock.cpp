@@ -602,6 +602,21 @@ bool DownstreamKeyerDock::AddScene(QString dskName, QString sceneName)
 	return false;
 }
 
+bool DownstreamKeyerDock::AddPausePoint(QString dskName, QString pauseName, int insertBeforeRow)
+{
+	const int count = tabs->count();
+	for (int i = 0; i < count; i++) {
+		auto w = dynamic_cast<DownstreamKeyer *>(tabs->widget(i));
+		if (w->objectName() == dskName) {
+			if (w->AddPausePoint(pauseName, insertBeforeRow)) {
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+
 bool DownstreamKeyerDock::RemoveScene(QString dskName, QString sceneName)
 {
 	const int count = tabs->count();
@@ -817,8 +832,40 @@ void DownstreamKeyerDock::add_scene(obs_data_t *request_data, obs_data_t *respon
 	}
 	obs_data_set_bool(response_data, "success", dsk->AddScene(QString::fromUtf8(dsk_name), QString::fromUtf8(scene_name)));
 }
+void DownstreamKeyerDock::add_pause_point(obs_data_t *request_data,
+				    obs_data_t *response_data, void *param)
+{
+	UNUSED_PARAMETER(param);
+	const char *viewName = obs_data_get_string(request_data, "view_name");
+	if (_dsks.find(viewName) == _dsks.end()) {
+		obs_data_set_string(response_data, "error",
+				    "'view_name' not found");
+		obs_data_set_bool(response_data, "success", false);
+		return;
+	}
+	auto dsk = _dsks[viewName];
+	const char *dsk_name = obs_data_get_string(request_data, "dsk_name");
+	const char *pause_name = obs_data_get_string(request_data, "pause_name");
+	int insert_before_row = obs_data_get_int(request_data, "insert_before_row");
+	if (!pause_name || !strlen(pause_name)) {
+		obs_data_set_string(response_data, "error",
+				    "'pause_name' name too short");
+		obs_data_set_bool(response_data, "success", false);
+		return;
+	}
+	if (!dsk_name || !strlen(dsk_name)) {
+		obs_data_set_string(response_data, "error",
+				    "'dsk_name' not set");
 
-void DownstreamKeyerDock::remove_scene(obs_data_t *request_data, obs_data_t *response_data, void *param)
+		obs_data_set_bool(response_data, "success", false);
+		return;
+	}
+	obs_data_set_bool(response_data, "success",
+			  dsk->AddPausePoint(QString::fromUtf8(dsk_name), QString::fromUtf8(pause_name),
+					      insert_before_row));
+}
+void DownstreamKeyerDock::remove_scene(obs_data_t *request_data,
+				       obs_data_t *response_data, void *param)
 {
 	UNUSED_PARAMETER(param);
 	const char *viewName = obs_data_get_string(request_data, "view_name");
