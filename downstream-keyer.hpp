@@ -3,12 +3,11 @@
 #define DOWNSTREAMKEYER_H
 
 #include <QCheckBox>
-#include <QComboBox>
-#include <QLabel>
-#include <QListWidget>
-#include <QSpinBox>
-#include <QTimer>
-#include <QToolBar>
+#include <qcombobox.h>
+#include <qlabel.h>
+#include <qlistwidget.h>
+#include <qspinbox.h>
+#include <qtoolbar.h>
 #include <QWidget>
 #include <set>
 #include "name-dialog.hpp"
@@ -34,7 +33,6 @@ class DownstreamKeyer : public QWidget {
 	Q_OBJECT
 
 private:
-	QTimer hideTimer;
 	DownstreamKeyerDock *parent;
 	int outputChannel;
 	obs_source_t *transition;
@@ -47,7 +45,6 @@ private:
 	uint32_t showTransitionDuration;
 	uint32_t hideTransitionDuration;
 	uint32_t overrideTransitionDuration;
-	uint32_t hideAfter;
 	LockedCheckBox *tie;
 	obs_hotkey_id null_hotkey_id;
 	obs_hotkey_pair_id tie_hotkey_id;
@@ -58,19 +55,24 @@ private:
 
 	static void source_rename(void *data, calldata_t *calldata);
 	static void source_remove(void *data, calldata_t *calldata);
-	static bool enable_DSK_hotkey(void *data, obs_hotkey_pair_id id, obs_hotkey_t *hotkey, bool pressed);
-	static bool disable_DSK_hotkey(void *data, obs_hotkey_pair_id id, obs_hotkey_t *hotkey, bool pressed);
+	static bool enable_DSK_hotkey(void *data, obs_hotkey_pair_id id,
+				      obs_hotkey_t *hotkey, bool pressed);
+	static bool disable_DSK_hotkey(void *data, obs_hotkey_pair_id id,
+				       obs_hotkey_t *hotkey, bool pressed);
 
-	static void null_hotkey(void *data, obs_hotkey_id id, obs_hotkey_t *hotkey, bool pressed);
+	static void null_hotkey(void *data, obs_hotkey_id id,
+				obs_hotkey_t *hotkey, bool pressed);
 
-	static bool enable_tie_hotkey(void *data, obs_hotkey_pair_id id, obs_hotkey_t *hotkey, bool pressed);
-	static bool disable_tie_hotkey(void *data, obs_hotkey_pair_id id, obs_hotkey_t *hotkey, bool pressed);
+	static bool enable_tie_hotkey(void *data, obs_hotkey_pair_id id,
+				      obs_hotkey_t *hotkey, bool pressed);
+	static bool disable_tie_hotkey(void *data, obs_hotkey_pair_id id,
+				       obs_hotkey_t *hotkey, bool pressed);
 
 	void ChangeSceneIndex(bool relative, int idx, int invalidIdx);
 
 private slots:
 	void on_actionAddScene_triggered();
-	void on_actionAddPausePoint_triggered();
+	void on_actionAddSpacerScene_triggered();
 	void on_actionRemoveScene_triggered();
 	void on_actionSceneUp_triggered();
 	void on_actionSceneDown_triggered();
@@ -88,12 +90,12 @@ public:
 
 	void Save(obs_data_t *data);
 	void Load(obs_data_t *data);
-	void SetTransition(const char *transition_name, enum transitionType transition_type = match);
+	void SetTransition(const char *transition_name,
+			   enum transitionType transition_type = match);
 	std::string GetTransition(enum transitionType transition_type = match);
-	void SetTransitionDuration(int duration, enum transitionType transition_type = match);
+	void SetTransitionDuration(int duration,
+				   enum transitionType transition_type = match);
 	int GetTransitionDuration(enum transitionType transition_type = match);
-	void SetHideAfter(int duration);
-	int GetHideAfter();
 	void SceneChanged(std::string scene);
 	void AddExcludeScene(const char *scene_name);
 	void RemoveExcludeScene(const char *scene_name);
@@ -101,8 +103,8 @@ public:
 	bool SwitchToScene(QString scene_name);
 	void add_scene(QString scene_name, obs_source_t *s, int insertBeforeRow);
 	bool AddScene(QString scene_name, int insertBeforeRow);
-	void add_pause_point(QString pause_name, int insertBeforeRow);
-	bool AddPausePoint(QString pause_name, int insertBeforeRow);	
+	void add_spacer_scene(QString spacer_name);
+	bool AddSpacerScene(QString spacer_name);	
 	bool RemoveScene(QString scene_name);
 	void SetTie(bool tie);
 	void SetOutputChannel(int outputChannel);
