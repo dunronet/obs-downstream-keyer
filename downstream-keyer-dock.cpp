@@ -171,6 +171,7 @@ void obs_module_post_load(void)
 					      nullptr);
 	obs_websocket_vendor_register_request(vendor, "dsk_select_scene", DownstreamKeyerDock::change_scene, nullptr);
 	obs_websocket_vendor_register_request(vendor, "dsk_add_scene", DownstreamKeyerDock::add_scene, nullptr);
+	obs_websocket_vendor_register_request(vendor, "dsk_add_pause_point", DownstreamKeyerDock::add_pause_point, nullptr);
 	obs_websocket_vendor_register_request(vendor, "dsk_remove_scene", DownstreamKeyerDock::remove_scene, nullptr);
 	obs_websocket_vendor_register_request(vendor, "dsk_set_tie", DownstreamKeyerDock::set_tie, nullptr);
 	obs_websocket_vendor_register_request(vendor, "dsk_set_transition", DownstreamKeyerDock::set_transition, nullptr);
@@ -193,6 +194,7 @@ void obs_module_unload()
 	obs_websocket_vendor_unregister_request(vendor, "remove_downstream_keyer");
 	obs_websocket_vendor_unregister_request(vendor, "dsk_select_scene");
 	obs_websocket_vendor_unregister_request(vendor, "dsk_add_scene");
+	obs_websocket_vendor_unregister_request(vendor, "dsk_add_pause_point");
 	obs_websocket_vendor_unregister_request(vendor, "dsk_remove_scene");
 	obs_websocket_vendor_unregister_request(vendor, "dsk_set_tie");
 	obs_websocket_vendor_unregister_request(vendor, "dsk_set_transition");
