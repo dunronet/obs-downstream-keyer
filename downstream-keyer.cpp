@@ -239,15 +239,15 @@ void DownstreamKeyer::on_actionAddPausePoint_triggered() {
 	if (NameDialog::AskForName(this, pause_name)) {
 
 		auto pauseName2 = pause_name;
-		int alreadyExistsCounter = scenesList->findItems(QT_UTF8(pauseName2), Qt::MatchFixedString).count() + 1;
-		while (alreadyExistsCounter > 1) {
+		int alreadyExistsCounter = scenesList->findItems(QT_UTF8(pauseName2), Qt::MatchFixedString).count();
+		while (alreadyExistsCounter > 0) {
 			/* Add (2), (3), etc as needed. */
-			/* Issue: Getting stuck on 2nd attempt.. */
-			//pauseName2 = pause_name + " (" + std::to_string(alreadyExistsCounter) + ")";
-			//alreadyExistsCounter = scenesList->findItems(QT_UTF8(pauseName2), Qt::MatchFixedString).count() + 1;
-			
-			/* For now, just do nothing (the way duplicate scenes are handled...) */
-			return;
+			pauseName2 = pause_name + " (" + std::to_string((alreadyExistsCounter+1)) + ")";
+			if (scenesList->findItems(QT_UTF8(pauseName2), Qt::MatchFixedString).count() == 0) {
+				alreadyExistsCounter = 0;
+			} else {
+				alreadyExistsCounter++;
+			}			
 			
 		}
 		const auto currentRow = scenesList->currentRow();
