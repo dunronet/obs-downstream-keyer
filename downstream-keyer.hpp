@@ -13,6 +13,8 @@
 #include "obs.h"
 #include "obs-websocket-api.h"
 
+#include "name-dialog.hpp"
+
 typedef void (*get_transitions_callback_t)(void *data, struct obs_frontend_source_list *sources);
 
 class LockedCheckBox : public QCheckBox {
@@ -64,6 +66,7 @@ private:
 
 private slots:
 	void on_actionAddScene_triggered();
+	void on_actionAddPausePoint_triggered();
 	void on_actionRemoveScene_triggered();
 	void on_actionSceneUp_triggered();
 	void on_actionSceneDown_triggered();
@@ -93,6 +96,8 @@ public:
 	bool SwitchToScene(QString scene_name);
 	void add_scene(QString scene_name, obs_source_t *s, int insertBeforeRow);
 	bool AddScene(QString scene_name, int insertBeforeRow);
+	void add_pause_point(QString pause_name, int insertBeforeRow);
+	bool AddPausePoint(QString pause_name, int insertBeforeRow);	
 	bool RemoveScene(QString scene_name);
 	void SetTie(bool tie);
 	void SetOutputChannel(int outputChannel);
