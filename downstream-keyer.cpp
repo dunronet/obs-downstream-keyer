@@ -1048,6 +1048,7 @@ bool DownstreamKeyer::AddPausePoint(QString pause_name, int insertBeforeRow)
 
 bool DownstreamKeyer::RemoveAllScenes()
 {
+	SwitchToScene(""); /* avoid memory leaks */
 	while (scenesList->count()) {
 		const auto item = scenesList->item(0);
 		scenesList->removeItemWidget(item);
