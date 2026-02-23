@@ -1229,9 +1229,18 @@ void DownstreamKeyerDock::RefreshDSKPreview()
 		return;
 
 	obs_scene_t *scene = obs_scene_from_source(preview_scene_as_source);
-	obs_scene_enum_items(
-		scene, remove_item,
-		nullptr);
+
+	// Remove all existing items from the preview scene
+    obs_scene_atomic_update(scene,
+        [](void * /*param*/, obs_scene_t *scene) {
+            obs_scene_enum_items(scene,
+                [](obs_scene_t * /*s*/, obs_sceneitem_t *item, void * /*p*/) -> bool {
+                    obs_sceneitem_remove(item);
+                    return true;
+                },
+                nullptr);
+        },
+        nullptr);
 
 	const int count = tabs->count();
 	for (int i = 0; i < count; i++) {
