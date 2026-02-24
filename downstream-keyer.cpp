@@ -258,15 +258,16 @@ void DownstreamKeyer::on_actionAddScene_triggered()
 }
 void DownstreamKeyer::on_actionAddPausePoint_triggered() {
 	// add a message box in...
-	std::string pause_name = "Give pause a unique name";
-	if (NameDialog::AskForName(this, pause_name)) {
+	QString pause_name = QT_UTF8(obs_module_text("DefaultPauseName"));
+	std::string tmp = pause_name.toUtf8().constData();
+	if (NameDialog::AskForName(this, tmp)) {
 
 		auto pauseName2 = pause_name;
-		int alreadyExistsCounter = scenesList->findItems(QT_UTF8(pauseName2), Qt::MatchFixedString).count();
+		int alreadyExistsCounter = scenesList->findItems(pauseName2, Qt::MatchFixedString).count();
 		while (alreadyExistsCounter > 0) {
 			/* Add (2), (3), etc as needed. */
-			pauseName2 = pause_name + " (" + std::to_string((alreadyExistsCounter+1)) + ")";
-			if (scenesList->findItems(QT_UTF8(pauseName2), Qt::MatchFixedString).count() == 0) {
+			pauseName2 = QString::fromUtf8(tmp.c_str()) + " (" + QString::number(alreadyExistsCounter+1) + ")";
+			if (scenesList->findItems(pauseName2, Qt::MatchFixedString).count() == 0) {
 				alreadyExistsCounter = 0;
 			} else {
 				alreadyExistsCounter++;
@@ -274,7 +275,7 @@ void DownstreamKeyer::on_actionAddPausePoint_triggered() {
 
 		}
 		const auto currentRow = scenesList->currentRow();
-		add_pause_point(QT_UTF8(pauseName2),currentRow);
+		add_pause_point(pauseName2,currentRow);
 	}
 
 }
