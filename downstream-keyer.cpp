@@ -316,7 +316,9 @@ void DownstreamKeyer::on_actionSceneNull_triggered()
 		auto item = scenesList->item(i);
 		item->setSelected(false);
 	}
+
 	scenesList->setCurrentRow(-1);
+
 }
 
 void DownstreamKeyer::apply_source(obs_source_t *const newSource)
