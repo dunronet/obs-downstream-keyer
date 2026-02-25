@@ -73,7 +73,7 @@ DownstreamKeyer::DownstreamKeyer(int channel, QString name, obs_view_t *v, obs_c
 	actionAddPause->setObjectName(QStringLiteral("actionAddPause"));
 	actionAddPause->setProperty("themeID", "pauseIconSmall");
 	actionAddPause->setProperty("class", "icon-media-pause");
-	actionAddPause->setText(QT_UTF8(obs_module_text("Add Pause")));
+	actionAddPause->setText(QT_UTF8(obs_module_text("AddPause")));
 	connect(actionAddPause, SIGNAL(triggered()), this, SLOT(on_actionAddPausePoint_triggered()));
 	scenesToolbar->addAction(actionAddPause);
 
@@ -302,6 +302,14 @@ void DownstreamKeyer::on_actionSceneDown_triggered()
 
 void DownstreamKeyer::on_actionSceneNull_triggered()
 {
+	
+	auto row = scenesList->currentRow();
+	if ((row == -1) && obs_frontend_preview_enabled()){
+		on_scenesList_itemSelectionChanged(); /* resolve issue where if sceneNull is triggered during a tie, then tie unchecked, then either a Transition or a New Scene has to be selected before sceneNull trigger will do anything.... */
+	}
+
+
+
 	for (int i = 0; i < scenesList->count(); i++) {
 		auto item = scenesList->item(i);
 		item->setSelected(false);
