@@ -73,7 +73,7 @@ DownstreamKeyer::DownstreamKeyer(int channel, QString name, obs_view_t *v, obs_c
 	actionAddPause->setObjectName(QStringLiteral("actionAddPause"));
 	actionAddPause->setProperty("themeID", "pauseIconSmall");
 	actionAddPause->setProperty("class", "icon-media-pause");
-	actionAddPause->setText(QT_UTF8(obs_module_text("Add Pause")));
+	actionAddPause->setText(QT_UTF8(obs_module_text("AddPause")));
 	connect(actionAddPause, SIGNAL(triggered()), this, SLOT(on_actionAddPausePoint_triggered()));
 	scenesToolbar->addAction(actionAddPause);
 
