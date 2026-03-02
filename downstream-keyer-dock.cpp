@@ -357,13 +357,13 @@ DownstreamKeyerDock::DownstreamKeyerDock(QWidget *parent, int oc, obs_view_t *v,
 			this);
 	}
 
-	tabs = new QTabWidget(this);
-	tabs->setMovable(true);
+	keyers = new DownstreamKeyerContainer(DownstreamKeyerStyle::Tabs, Qt::Vertical, this);
+	keyers->setMovable(true);
 
-	connect(tabs->tabBar(), &QTabBar::tabMoved, tabs->tabBar(), [this]() {
-		int count = tabs->count();
+	connect(keyers, &DownstreamKeyerContainer::pageMoved, this, [this](int, int) {
+		int count = keyers->count();
 		for (int i = 0; i < count; i++) {
-			auto w = dynamic_cast<DownstreamKeyer *>(tabs->widget(i));
+			auto w = dynamic_cast<DownstreamKeyer *>(keyers->widget(i));
 			w->SetOutputChannel(outputChannel + i);
 		}
 	});
@@ -374,10 +374,10 @@ DownstreamKeyerDock::DownstreamKeyerDock(QWidget *parent, int oc, obs_view_t *v,
 
 	connect(config, &QAbstractButton::clicked, this, &DownstreamKeyerDock::ConfigClicked);
 
-	tabs->setCornerWidget(config);
+	keyers->setCornerWidget(config);
 	auto l = new QVBoxLayout;
 	l->setContentsMargins(0, 0, 0, 0);
-	l->addWidget(tabs);
+	l->addWidget(keyers);
 	setLayout(l);
 
 	obs_frontend_add_save_callback(frontend_save_load, this);
@@ -401,14 +401,14 @@ void DownstreamKeyerDock::SetTransitions(get_transitions_callback_t gt, void *gt
 
 void DownstreamKeyerDock::Save(obs_data_t *data)
 {
-	obs_data_array_t *keyers = obs_data_array_create();
-	int count = tabs->count();
+	obs_data_array_t *keyersX = obs_data_array_create();
+	int count = keyers->count();
 	for (int i = 0; i < count; i++) {
-		auto w = dynamic_cast<DownstreamKeyer *>(tabs->widget(i));
+		auto w = dynamic_cast<DownstreamKeyer *>(keyers->widget(i));
 		const auto keyerData = obs_data_create();
-		obs_data_set_string(keyerData, "name", QT_TO_UTF8(tabs->tabText(i)));
+		obs_data_set_string(keyerData, "name", QT_TO_UTF8(keyers->name(i)));
 		w->Save(keyerData);
-		obs_data_array_push_back(keyers, keyerData);
+		obs_data_array_push_back(keyersX, keyerData);
 		obs_data_release(keyerData);
 	}
 	if (!viewName.empty()) {
@@ -417,20 +417,23 @@ void DownstreamKeyerDock::Save(obs_data_t *data)
 		obs_data_set_int(data, s.c_str(), outputChannel);
 		s = viewName;
 		s += "_downstream_keyers";
-		obs_data_set_array(data, s.c_str(), keyers);
+		obs_data_set_array(data, s.c_str(), keyersX);
 
 	} else {
 		obs_data_set_int(data, "downstream_keyers_channel", outputChannel);
-		obs_data_set_array(data, "downstream_keyers", keyers);
+		obs_data_set_array(data, "downstream_keyers", keyersX);
 	}
-	obs_data_array_release(keyers);
+	obs_data_set_int(data, "dock_style", (int)selectorStyle);
+	obs_data_set_int(data, "dock_orientation", (int)selectorOrientation);
+
+	obs_data_array_release(keyersX);
 }
 
 void DownstreamKeyerDock::Load(obs_data_t *data)
 {
 	if (loaded)
 		return;
-	obs_data_array_t *keyers = nullptr;
+	obs_data_array_t *keyersX = nullptr;
 	if (!viewName.empty()) {
 		std::string s = viewName;
 		s += "_downstream_keyers_channel";
@@ -439,30 +442,35 @@ void DownstreamKeyerDock::Load(obs_data_t *data)
 			outputChannel = 1;
 		s = viewName;
 		s += "_downstream_keyers";
-		keyers = obs_data_get_array(data, s.c_str());
+		keyersX = obs_data_get_array(data, s.c_str());
 	} else {
 		outputChannel = obs_data_get_int(data, "downstream_keyers_channel");
 		if (outputChannel < 7 || outputChannel >= MAX_CHANNELS)
 			outputChannel = 7;
-		keyers = obs_data_get_array(data, "downstream_keyers");
+		keyersX = obs_data_get_array(data, "downstream_keyers");
 	}
+	selectorStyle = (DownstreamKeyerStyle)obs_data_get_int(data, "dock_style");
+	selectorOrientation = (Qt::Orientation)obs_data_get_int(data, "dock_orientation");
+
+	setDownstreamKeyerStyle(selectorStyle, selectorOrientation);
+
 	ClearKeyers();
-	if (keyers) {
-		auto count = obs_data_array_count(keyers);
+	if (keyersX) {
+		auto count = obs_data_array_count(keyersX);
 		if (count == 0) {
 			AddDefaultKeyer();
 		}
 		obs_canvas_t *c = obs_weak_canvas_get_canvas(canvas);
 		for (size_t i = 0; i < count; i++) {
-			auto keyerData = obs_data_array_item(keyers, i);
+			auto keyerData = obs_data_array_item(keyersX, i);
 			auto keyer = new DownstreamKeyer((int)(outputChannel + i), QT_UTF8(obs_data_get_string(keyerData, "name")),
 							 view, c, get_transitions, get_transitions_data);
 			keyer->Load(keyerData);
-			tabs->addTab(keyer, keyer->objectName());
+			keyers->addPage(keyer, keyer->objectName());
 			obs_data_release(keyerData);
 		}
 		obs_canvas_release(c);
-		obs_data_array_release(keyers);
+		obs_data_array_release(keyersX);
 	} else {
 		AddDefaultKeyer();
 	}
@@ -470,9 +478,9 @@ void DownstreamKeyerDock::Load(obs_data_t *data)
 
 void DownstreamKeyerDock::ClearKeyers()
 {
-	while (tabs->count()) {
-		auto w = dynamic_cast<DownstreamKeyer *>(tabs->widget(0));
-		tabs->removeTab(0);
+	while (keyers->count()) {
+		auto w = dynamic_cast<DownstreamKeyer *>(keyers->widget(0));
+		keyers->removePage(0);
 		delete w;
 	}
 	loaded = false;
@@ -494,13 +502,13 @@ void DownstreamKeyerDock::AddDefaultKeyer()
 	auto keyer = new DownstreamKeyer(outputChannel, QT_UTF8(obs_module_text("DefaultName")), view, c, get_transitions,
 					 get_transitions_data);
 	obs_canvas_release(c);
-	tabs->addTab(keyer, keyer->objectName());
+	keyers->addPage(keyer, keyer->objectName());
 }
 void DownstreamKeyerDock::SceneChanged()
 {
 	if (closing)
 		return;
-	const int count = tabs->count();
+	const int count = keyers->count();
 
 	obs_source_t *scene = nullptr;
 	if (view) {
@@ -543,7 +551,7 @@ void DownstreamKeyerDock::SceneChanged()
 	}
 	std::string scene_name = scene ? obs_source_get_name(scene) : "";
 	for (int i = 0; i < count; i++) {
-		auto w = dynamic_cast<DownstreamKeyer *>(tabs->widget(i));
+		auto w = dynamic_cast<DownstreamKeyer *>(keyers->widget(i));
 		if (w)
 			w->SceneChanged(scene_name);
 	}
@@ -555,14 +563,14 @@ void DownstreamKeyerDock::AddTransitionMenu(QMenu *tm, enum transitionType trans
 
 	std::string transition;
 	int transition_duration = 300;
-	auto w = dynamic_cast<DownstreamKeyer *>(tabs->currentWidget());
+	auto w = dynamic_cast<DownstreamKeyer *>(keyers->currentWidget());
 	if (w) {
 		transition = w->GetTransition(transition_type);
 		transition_duration = w->GetTransitionDuration(transition_type);
 	}
 
 	auto setTransition = [this, transition_type](std::string name) {
-		auto w = dynamic_cast<DownstreamKeyer *>(tabs->currentWidget());
+		auto w = dynamic_cast<DownstreamKeyer *>(keyers->currentWidget());
 		if (w)
 			w->SetTransition(name.c_str(), transition_type);
 	};
@@ -595,7 +603,7 @@ void DownstreamKeyerDock::AddTransitionMenu(QMenu *tm, enum transitionType trans
 	duration->setValue(transition_duration);
 
 	auto setDuration = [this, transition_type](int duration) {
-		auto w = dynamic_cast<DownstreamKeyer *>(tabs->currentWidget());
+		auto w = dynamic_cast<DownstreamKeyer *>(keyers->currentWidget());
 		if (w)
 			w->SetTransitionDuration(duration, transition_type);
 	};
@@ -610,7 +618,7 @@ void DownstreamKeyerDock::AddTransitionMenu(QMenu *tm, enum transitionType trans
 void DownstreamKeyerDock::AddExcludeSceneMenu(QMenu *tm)
 {
 	auto setSceneExclude = [this](std::string name, bool add) {
-		const auto w = dynamic_cast<DownstreamKeyer *>(tabs->currentWidget());
+		const auto w = dynamic_cast<DownstreamKeyer *>(keyers->currentWidget());
 		if (w) {
 			if (add) {
 				w->AddExcludeScene(name.c_str());
@@ -619,7 +627,7 @@ void DownstreamKeyerDock::AddExcludeSceneMenu(QMenu *tm)
 			}
 		}
 	};
-	const auto w = dynamic_cast<DownstreamKeyer *>(tabs->currentWidget());
+	const auto w = dynamic_cast<DownstreamKeyer *>(keyers->currentWidget());
 	struct obs_frontend_source_list scenes = {};
 	obs_frontend_get_scenes(&scenes);
 	for (size_t i = 0; i < scenes.sources.num; i++) {
@@ -663,10 +671,10 @@ void DownstreamKeyerDock::ConfigClicked()
 	duration->setSuffix("ms");
 	duration->setMaximum(1000000);
 	duration->setSingleStep(1000);
-	const auto w = dynamic_cast<DownstreamKeyer *>(tabs->currentWidget());
+	const auto w = dynamic_cast<DownstreamKeyer *>(keyers->currentWidget());
 	duration->setValue(w->GetHideAfter());
 	auto setDuration = [&](int duration) {
-		auto w = dynamic_cast<DownstreamKeyer *>(tabs->currentWidget());
+		auto w = dynamic_cast<DownstreamKeyer *>(keyers->currentWidget());
 		if (w)
 			w->SetHideAfter(duration);
 	};
@@ -675,6 +683,33 @@ void DownstreamKeyerDock::ConfigClicked()
 	durationAction->setDefaultWidget(duration);
 
 	tm->addAction(durationAction);
+
+	// after the other submenu creations, before popup.exec()
+	auto viewMenu = popup.addMenu(QT_UTF8(obs_module_text("ViewStyle")));
+
+	a = viewMenu->addAction(QT_UTF8(obs_module_text("Tabs")));
+	a->setCheckable(true);
+	a->setChecked(keyers->getStyle() == DownstreamKeyerStyle::Tabs);
+	connect(a, &QAction::triggered, [this] {
+		setDownstreamKeyerStyle(DownstreamKeyerStyle::Tabs, Qt::Vertical);
+	});
+
+	a = viewMenu->addAction(QT_UTF8(obs_module_text("ListVertical")));
+	a->setCheckable(true);
+	a->setChecked(keyers->getStyle() == DownstreamKeyerStyle::List &&
+				selectorOrientation == Qt::Vertical);
+	connect(a, &QAction::triggered, [this] {
+		setDownstreamKeyerStyle(DownstreamKeyerStyle::List, Qt::Vertical);
+	});
+
+	a = viewMenu->addAction(QT_UTF8(obs_module_text("ListHorizontal")));
+	a->setCheckable(true);
+	a->setChecked(keyers->getStyle() == DownstreamKeyerStyle::List &&
+				selectorOrientation == Qt::Horizontal);
+	connect(a, &QAction::triggered, [this] {
+		setDownstreamKeyerStyle(DownstreamKeyerStyle::List, Qt::Horizontal);
+	});
+
 	popup.exec(QCursor::pos());
 }
 
@@ -689,40 +724,40 @@ void DownstreamKeyerDock::Add(QString name)
 	if (outputChannel < 7 || outputChannel >= MAX_CHANNELS)
 		outputChannel = 7;
 	obs_canvas_t *c = obs_weak_canvas_get_canvas(canvas);
-	auto keyer = new DownstreamKeyer(outputChannel + tabs->count(), name, view, c, get_transitions, get_transitions_data);
+	auto keyer = new DownstreamKeyer(outputChannel + keyers->count(), name, view, c, get_transitions, get_transitions_data);
 	obs_canvas_release(c);
-	tabs->addTab(keyer, keyer->objectName());
+	keyers->addPage(keyer, keyer->objectName());
 }
 
 void DownstreamKeyerDock::Rename()
 {
-	int i = tabs->currentIndex();
+	int i = keyers->currentIndex();
 	if (i < 0)
 		return;
-	std::string name = QT_TO_UTF8(tabs->tabText(i));
+	std::string name = QT_TO_UTF8(keyers->name(i));
 	if (NameDialog::AskForName(this, name)) {
-		tabs->setTabText(i, QT_UTF8(name.c_str()));
+		keyers->setName(i, QT_UTF8(name.c_str()));
 	}
 }
 
 void DownstreamKeyerDock::Remove(int index)
 {
 	if (index < 0)
-		index = tabs->currentIndex();
+		index = keyers->currentIndex();
 	if (index < 0)
 		return;
-	auto w = tabs->widget(index);
-	tabs->removeTab(index);
+	auto w = keyers->widget(index);
+	keyers->removePage(index);
 	delete w;
-	if (tabs->count() == 0) {
+	if (keyers->count() == 0) {
 		AddDefaultKeyer();
 	}
 }
 QString DownstreamKeyerDock::GetScene(QString dskName)
 {
-	const int count = tabs->count();
+	const int count = keyers->count();
 	for (int i = 0; i < count; i++) {
-		auto w = dynamic_cast<DownstreamKeyer *>(tabs->widget(i));
+		auto w = dynamic_cast<DownstreamKeyer *>(keyers->widget(i));
 		if (w->objectName() == dskName) {
 			return w->GetScene();
 		}
@@ -732,9 +767,9 @@ QString DownstreamKeyerDock::GetScene(QString dskName)
 
 bool DownstreamKeyerDock::SwitchDSK(QString dskName, QString sceneName)
 {
-	const int count = tabs->count();
+	const int count = keyers->count();
 	for (int i = 0; i < count; i++) {
-		auto w = dynamic_cast<DownstreamKeyer *>(tabs->widget(i));
+		auto w = dynamic_cast<DownstreamKeyer *>(keyers->widget(i));
 		if (w->objectName() == dskName) {
 			if (w->SwitchToScene(sceneName)) {
 				return true;
@@ -746,9 +781,9 @@ bool DownstreamKeyerDock::SwitchDSK(QString dskName, QString sceneName)
 
 bool DownstreamKeyerDock::AddScene(QString dskName, QString sceneName, int insertBeforeRow)
 {
-	const int count = tabs->count();
+	const int count = keyers->count();
 	for (int i = 0; i < count; i++) {
-		auto w = dynamic_cast<DownstreamKeyer *>(tabs->widget(i));
+		auto w = dynamic_cast<DownstreamKeyer *>(keyers->widget(i));
 		if (w->objectName() == dskName) {
 			if (w->AddScene(sceneName, insertBeforeRow)) {
 				return true;
@@ -760,9 +795,9 @@ bool DownstreamKeyerDock::AddScene(QString dskName, QString sceneName, int inser
 
 bool DownstreamKeyerDock::RemoveScene(QString dskName, QString sceneName)
 {
-	const int count = tabs->count();
+	const int count = keyers->count();
 	for (int i = 0; i < count; i++) {
-		auto w = dynamic_cast<DownstreamKeyer *>(tabs->widget(i));
+		auto w = dynamic_cast<DownstreamKeyer *>(keyers->widget(i));
 		if (w->objectName() == dskName) {
 			if (w->RemoveScene(sceneName)) {
 				return true;
@@ -774,9 +809,9 @@ bool DownstreamKeyerDock::RemoveScene(QString dskName, QString sceneName)
 
 bool DownstreamKeyerDock::SetTie(QString dskName, bool tie)
 {
-	const int count = tabs->count();
+	const int count = keyers->count();
 	for (int i = 0; i < count; i++) {
-		auto w = dynamic_cast<DownstreamKeyer *>(tabs->widget(i));
+		auto w = dynamic_cast<DownstreamKeyer *>(keyers->widget(i));
 		if (w->objectName() == dskName) {
 			w->SetTie(tie);
 			return true;
@@ -787,9 +822,9 @@ bool DownstreamKeyerDock::SetTie(QString dskName, bool tie)
 
 bool DownstreamKeyerDock::SetTransition(const QString &dskName, const char *transition, int duration, transitionType tt)
 {
-	const int count = tabs->count();
+	const int count = keyers->count();
 	for (int i = 0; i < count; i++) {
-		auto w = dynamic_cast<DownstreamKeyer *>(tabs->widget(i));
+		auto w = dynamic_cast<DownstreamKeyer *>(keyers->widget(i));
 		if (w->objectName() == dskName) {
 			w->SetTransition(transition, tt);
 			w->SetTransitionDuration(duration, tt);
@@ -801,9 +836,9 @@ bool DownstreamKeyerDock::SetTransition(const QString &dskName, const char *tran
 
 bool DownstreamKeyerDock::AddExcludeScene(QString dskName, const char *sceneName)
 {
-	const int count = tabs->count();
+	const int count = keyers->count();
 	for (int i = 0; i < count; i++) {
-		auto w = dynamic_cast<DownstreamKeyer *>(tabs->widget(i));
+		auto w = dynamic_cast<DownstreamKeyer *>(keyers->widget(i));
 		if (w->objectName() == dskName) {
 			w->AddExcludeScene(sceneName);
 			return true;
@@ -814,9 +849,9 @@ bool DownstreamKeyerDock::AddExcludeScene(QString dskName, const char *sceneName
 
 bool DownstreamKeyerDock::RemoveExcludeScene(QString dskName, const char *sceneName)
 {
-	const int count = tabs->count();
+	const int count = keyers->count();
 	for (int i = 0; i < count; i++) {
-		auto w = dynamic_cast<DownstreamKeyer *>(tabs->widget(i));
+		auto w = dynamic_cast<DownstreamKeyer *>(keyers->widget(i));
 		if (w->objectName() == dskName) {
 			w->RemoveExcludeScene(sceneName);
 			return true;
@@ -851,9 +886,9 @@ void DownstreamKeyerDock::get_downstream_keyer(obs_data_t *request_data, obs_dat
 		return;
 	}
 	QString dskName = QString::fromUtf8(dsk_name);
-	const int count = dsk->tabs->count();
+	const int count = dsk->keyers->count();
 	for (int i = 0; i < count; i++) {
-		auto w = dynamic_cast<DownstreamKeyer *>(dsk->tabs->widget(i));
+		auto w = dynamic_cast<DownstreamKeyer *>(dsk->keyers->widget(i));
 		if (w->objectName() == dskName) {
 			obs_data_set_bool(response_data, "success", true);
 			w->Save(response_data);
@@ -881,9 +916,9 @@ void DownstreamKeyerDock::add_downstream_keyer(obs_data_t *request_data, obs_dat
 		return;
 	}
 	QString dskName = QString::fromUtf8(dsk_name);
-	const int count = dsk->tabs->count();
+	const int count = dsk->keyers->count();
 	for (int i = 0; i < count; i++) {
-		auto w = dynamic_cast<DownstreamKeyer *>(dsk->tabs->widget(i));
+		auto w = dynamic_cast<DownstreamKeyer *>(dsk->keyers->widget(i));
 		if (w->objectName() == dskName) {
 			obs_data_set_string(response_data, "error", "'dsk_name' exists");
 			obs_data_set_bool(response_data, "success", false);
@@ -911,9 +946,9 @@ void DownstreamKeyerDock::remove_downstream_keyer(obs_data_t *request_data, obs_
 		return;
 	}
 	QString dskName = QString::fromUtf8(dsk_name);
-	const int count = dsk->tabs->count();
+	const int count = dsk->keyers->count();
 	for (int i = 0; i < count; i++) {
-		auto w = dynamic_cast<DownstreamKeyer *>(dsk->tabs->widget(i));
+		auto w = dynamic_cast<DownstreamKeyer *>(dsk->keyers->widget(i));
 		if (w->objectName() == dskName) {
 			QMetaObject::invokeMethod(dsk, "Remove", Q_ARG(int, i));
 			obs_data_set_bool(response_data, "success", true);
@@ -1129,4 +1164,228 @@ void DownstreamKeyerDock::remove_exclude_scene(obs_data_t *request_data, obs_dat
 		return;
 	}
 	obs_data_set_bool(response_data, "success", dsk->RemoveExcludeScene(QString::fromUtf8(dsk_name), scene_name));
+}
+
+DownstreamKeyerContainer::DownstreamKeyerContainer(DownstreamKeyerStyle style,
+                                                   Qt::Orientation listOrient,
+                                                   QWidget *parent)
+    : QWidget(parent),
+      m_style(style),
+      m_listOrientation(listOrient),
+      m_tabs(new QTabWidget(this)),
+      m_list(new QListWidget(this)),
+      m_stack(new QStackedWidget(this)),
+	  m_names(new QStringList(0)),
+	  m_h_layout(new QHBoxLayout(this)),
+	  m_v_layout(new QVBoxLayout(this))
+{
+    // configure both selectors
+    m_list->setFlow(m_listOrientation == Qt::Horizontal
+                    ? QListView::LeftToRight
+                    : QListView::TopToBottom);
+    m_list->setDragDropMode(QAbstractItemView::InternalMove);
+    m_list->setMovement(QListView::Static);
+
+    // forward signals from either widget
+    connect(m_tabs->tabBar(), &QTabBar::tabMoved,
+            this, [this](int f, int t){ emit pageMoved(f, t); });
+    connect(m_list->model(), &QAbstractItemModel::rowsMoved,
+            this, [this](const QModelIndex&, int f, int,
+                         const QModelIndex&, int t){ emit pageMoved(f, t); });
+
+    connect(m_tabs, &QTabWidget::currentChanged,
+            this, &DownstreamKeyerContainer::currentChanged);
+    connect(m_list, &QListWidget::currentRowChanged,
+            this, &DownstreamKeyerContainer::currentChanged);
+
+    // layout: selectors above the stack
+    auto *vlay = new QVBoxLayout(this);
+    vlay->setContentsMargins(0,0,0,0);
+    vlay->addWidget(m_tabs);
+    vlay->addWidget(m_list);
+    vlay->addWidget(m_stack);
+    setLayout(vlay);
+
+    // start in the requested style
+    //m_tabs->setVisible(m_style == DownstreamKeyerStyle::Tabs);
+    //m_list->setVisible(m_style == DownstreamKeyerStyle::List);
+}
+
+int DownstreamKeyerContainer::count() const
+{
+	if(m_style == DownstreamKeyerStyle::List) {
+    	return m_stack->count();
+	} else {
+		return m_tabs->count();
+	}
+}
+
+QWidget *DownstreamKeyerContainer::widget(int idx) const
+{
+	if(m_style == DownstreamKeyerStyle::List) {
+    	return m_stack->widget(idx);
+	} else {
+		return m_tabs->widget(idx);
+	}
+}
+
+QString DownstreamKeyerContainer::name(int idx) const
+{
+    return (idx >= 0 && idx < m_names->size()) ? m_names->at(idx) : QString();
+}
+
+void DownstreamKeyerContainer::setName(int idx, const QString &text)
+{
+    if (idx < 0 || idx >= m_names->size())
+        return;
+    m_names->replace(idx, text);
+    m_tabs->setTabText(idx, text);
+    m_list->item(idx)->setText(text);
+}
+
+int DownstreamKeyerContainer::currentIndex() const
+{
+	if(m_style == DownstreamKeyerStyle::List) {
+    	return m_stack->currentIndex();
+	} else {
+		return m_tabs->currentIndex();
+	}
+}
+
+QWidget *DownstreamKeyerContainer::currentWidget() const
+{
+    return m_stack->currentWidget();
+}
+
+void DownstreamKeyerContainer::setCurrentIndex(int idx)
+{
+    if (idx < 0 || idx >= count())
+        return;
+    m_stack->setCurrentIndex(idx);
+    m_tabs->setCurrentIndex(idx);
+    m_list->setCurrentRow(idx);
+}
+
+int DownstreamKeyerContainer::addPage(QWidget *page, const QString &name)
+{
+    int idx = m_stack->addWidget(page);
+    m_names->insert(idx, name);
+    m_tabs->addTab(page, name);
+    m_list->insertItem(idx, name);
+    return idx;
+}
+
+void DownstreamKeyerContainer::removePage(int idx)
+{
+    if (idx < 0 || idx >= count())
+        return;
+    m_names->removeAt(idx);
+    m_tabs->removeTab(idx);
+    delete m_list->takeItem(idx);
+    QWidget *w = m_stack->widget(idx);
+    m_stack->removeWidget(w);
+}
+
+void DownstreamKeyerContainer::clear()
+{
+    m_tabs->clear();
+    m_list->clear();
+    while (m_stack->count()) {
+        QWidget *w = m_stack->widget(0);
+        m_stack->removeWidget(w);
+    }
+    m_names->clear();
+}
+
+void DownstreamKeyerContainer::setMovable(bool movable)
+{
+    m_tabs->setMovable(movable);
+    m_list->setDragEnabled(movable);
+}
+
+void DownstreamKeyerContainer::setCornerWidget(QWidget *widget)
+{
+	m_config_widget = widget;
+}
+
+void DownstreamKeyerContainer::setStyle(DownstreamKeyerStyle style,
+                                        Qt::Orientation listOrient)
+{
+    if (m_style == style && m_listOrientation == listOrient)
+        return;
+    m_style = style;
+    m_listOrientation = listOrient;
+
+    m_list->setFlow(m_listOrientation == Qt::Horizontal
+                    ? QListView::LeftToRight
+                    : QListView::TopToBottom);
+
+	if (m_style == DownstreamKeyerStyle::Tabs) {
+		m_tabs->setVisible(true);
+		m_tabs->setCornerWidget(m_config_widget);
+		m_list->setVisible(false);
+	} else if (m_style == DownstreamKeyerStyle::List) {
+		m_list->setVisible(true);
+		m_list->setCornerWidget(m_config_widget);
+		m_tabs->setVisible(false);
+	} else {
+    	m_tabs->setVisible(m_style == DownstreamKeyerStyle::Tabs);
+		m_tabs->setCornerWidget(m_config_widget);
+    	m_list->setVisible(m_style == DownstreamKeyerStyle::List);
+	}
+
+
+    // if (m_style == DownstreamKeyerStyle::List) {
+    //     // Switch to side-by-side view
+    //     if (m_tabs->parent() == this) { // Check if tabs widget is currently in the layout
+    //         layout()->removeWidget(m_tabs); // Remove tabs widget from layout
+    //     }
+    //     mSideBySideWidget = new QWidget(this);
+    //     QHBoxLayout *m_h_layout = new QHBoxLayout(mSideBySideWidget); // Renamed to sideBySideLayout
+    //     for (const auto &index : mSideBySideTabOrder) {
+    //         QWidget *tabWidget = mTabInfoList[index].widget;
+    //         QString tabName = mTabInfoList[index].name;
+    //         m_h_layout->addWidget(createListWidget(tabWidget, tabName));
+    //     }
+    //     m_h_layout->addItem(new QSpacerItem(0, 0, QSizePolicy::Minimum, QSizePolicy::Expanding));
+    //     setLayout(m_h_layout);
+    //     mCurrentView = SideBySideView;
+    // } else {
+    //     // Switch back to tab view
+    //     auto currentLayout = layout(); // Get the current layout
+    //     if (currentLayout) {
+    //         QWidget *tabsParent = tabs->parentWidget();
+    //         if (tabsParent) {
+    //             currentLayout->removeWidget(m_tabs); // Remove tabs widget from current layout
+    //             auto tabLayout = qobject_cast<QVBoxLayout*>(currentLayout);
+    //             if (tabLayout) {
+    //                 tabLayout->addWidget(m_tabs); // Add tabs widget back to tabLayout
+    //             }
+    //         }
+    //     }
+    //     refreshTabs(); // Re-add tabs to tab widget
+    //     if (mSideBySideWidget) {
+    //         delete mSideBySideWidget; // Delete the side-by-side widget
+    //         mSideBySideWidget = nullptr; // Reset the pointer
+    //     }
+    // }
+
+
+
+
+
+}
+
+
+void DownstreamKeyerDock::setDownstreamKeyerStyle(DownstreamKeyerStyle style,
+                                           Qt::Orientation orient)
+{
+    selectorOrientation = orient;
+    keyers->setStyle(style, orient);
+    // store in config, e.g. write to obs_data fields during Save()
+
+
+	
+
+
 }

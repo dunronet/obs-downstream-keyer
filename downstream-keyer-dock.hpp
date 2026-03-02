@@ -1,17 +1,68 @@
 #pragma once
 #include <QDockWidget>
 #include <qmenu.h>
-#include <QTabWidget>
+//#include <QTabWidget>
+#include <QStackedWidget>
 #include <QVBoxLayout>
 #include <QFrame>
 #include <obs-frontend-api.h>
 #include "downstream-keyer.hpp"
 #include "obs-websocket-api.h"
 
+enum class DownstreamKeyerStyle { Tabs, List };
+
+class DownstreamKeyerContainer : public QWidget {
+    Q_OBJECT
+public:
+    DownstreamKeyerContainer(DownstreamKeyerStyle style = DownstreamKeyerStyle::Tabs,
+                             Qt::Orientation listOrient = Qt::Vertical,
+                             QWidget *parent = nullptr);
+
+    int            count() const;
+    QWidget       *widget(int idx) const;
+    QString        name(int idx) const;
+    void           setName(int idx, const QString &text);
+    int            currentIndex() const;
+    QWidget       *currentWidget() const;
+    void           setCurrentIndex(int idx);
+    int            addPage(QWidget *page, const QString &name);
+    void           removePage(int idx);
+    void           clear();
+
+    void           setMovable(bool movable);
+    void           setCornerWidget(QWidget *widget);
+
+    void           setStyle(DownstreamKeyerStyle style,
+                            Qt::Orientation listOrient = Qt::Vertical);
+
+    DownstreamKeyerStyle getStyle() const { return m_style; }
+
+signals:
+    void currentChanged(int idx);
+    void pageMoved(int from, int to);
+
+private:
+    DownstreamKeyerStyle   m_style;
+    Qt::Orientation        m_listOrientation;
+
+    QStackedWidget        *m_stack{nullptr};
+    QListWidget           *m_list{nullptr};
+
+	QHBoxLayout			  *m_h_layout{nullptr};
+	QVBoxLayout			  *m_v_layout{nullptr};
+    QTabWidget            *m_tabs{nullptr};
+
+
+    QStringList           *m_names{nullptr};      // keep text for both selectors
+	QWidget				  *m_config_widget{nullptr};
+};
+
 class DownstreamKeyerDock : public QFrame {
 	Q_OBJECT
 private:
-	QTabWidget *tabs;
+	DownstreamKeyerContainer *keyers;
+	DownstreamKeyerStyle selectorStyle = DownstreamKeyerStyle::Tabs;
+	Qt::Orientation selectorOrientation = Qt::Vertical;
 	int outputChannel;
 	bool loaded = false;
 	bool closing = false;
@@ -47,6 +98,9 @@ public:
 	DownstreamKeyerDock(QWidget *parent = nullptr, int outputChannel = 7, obs_view_t *view = nullptr,
 			    obs_canvas_t *canvas = nullptr, const char *view_name = nullptr);
 	~DownstreamKeyerDock();
+
+	void setDownstreamKeyerStyle(DownstreamKeyerStyle style,
+                                           Qt::Orientation orient);
 
 	void SetTransitions(get_transitions_callback_t get_transitions = nullptr, void *get_transitions_data = nullptr);
 

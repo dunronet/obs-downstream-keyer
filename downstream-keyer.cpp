@@ -571,7 +571,7 @@ void DownstreamKeyer::SetHideAfter(int duration)
 
 int DownstreamKeyer::GetHideAfter()
 {
-	return hideAfter;
+	return 10000; //hideAfter;
 }
 
 void DownstreamKeyer::SceneChanged(std::string scene)
